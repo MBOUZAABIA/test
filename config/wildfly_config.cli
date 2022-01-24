@@ -1,5 +1,7 @@
 batch
 embed-server
+/subsystem=logging/root-logger=ROOT:change-root-log-level(level=DEBUG)
+/subsystem=logging/console-handler=CONSOLE:write-attribute(name=level,value=DEBUG)
 
 /subsystem=datasources/jdbc-driver=postgresql-test:add(driver-name="postgresql-test",driver-module-name="org.postgresql",driver-class-name=org.postgresql.Driver)
 /subsystem=transactions:write-attribute(name=default-timeout,value=14400)

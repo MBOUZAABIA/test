@@ -9,6 +9,7 @@ import org.camunda.bpm.engine.cdi.annotation.ProcessEngineName;
 import org.camunda.bpm.engine.management.JobDefinition;
 import org.camunda.bpm.engine.repository.Deployment;
 import org.camunda.bpm.engine.repository.ProcessDefinition;
+import org.camunda.bpm.engine.runtime.Execution;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,13 +94,15 @@ public class EngineService {
     for(String activityId : activityIds){
       try {
         logger.info("trying to suspend job definition for activityId={}",activityId);
-        JobDefinition
-            associatedJobDefinition =
+        List<JobDefinition>
+            jobDefinitions =
             processEngine.getManagementService().createJobDefinitionQuery().activityIdIn(activityId)
-                .processDefinitionId(processInstance.getProcessDefinitionId())
-                .jobConfiguration("async-before").singleResult();
-        processEngine.getManagementService().suspendJobDefinitionById(associatedJobDefinition.getId());
-        logger.info("Job definition with id={} for activityId={} is now suspended", associatedJobDefinition.getId(), activityId);
+                .processDefinitionId(processInstance.getProcessDefinitionId()).list();
+        jobDefinitions.forEach(x->{
+          processEngine.getManagementService().suspendJobDefinitionById(x.getId());
+          logger.info("Job definition with id={} for activityId={} is now suspended", x.getId(), activityId);
+        });
+
       } catch (Exception e) {
         logger.error("An error occurred while suspending a Job definition : activityId={}", activityId, e);
       }
@@ -153,4 +156,28 @@ public class EngineService {
   }
 
 
+  public boolean checkSuspensionForActivity(String currentActivityId) throws Exception {
+    ProcessInstance processInstance = getCurrentProcessInstance();
+    if(processInstance!=null){
+      JobDefinition
+          associatedJobDefinition =
+          processEngine.getManagementService().createJobDefinitionQuery().activityIdIn(currentActivityId)
+              .processDefinitionId(processInstance.getProcessDefinitionId())
+              .jobConfiguration("async-before").singleResult();
+      return associatedJobDefinition.isSuspended();
+    }
+    throw new Exception("No instance");
+  }
+
+  public boolean checkSuspension2ForActivity(String currentActivityId) throws Exception {
+    ProcessInstance processInstance = getCurrentProcessInstance();
+    if(processInstance!=null){
+      Execution
+          execution =
+          processEngine.getRuntimeService().createExecutionQuery().processInstanceId(processInstance.getId())
+              .activityId(currentActivityId).singleResult();
+      return execution.isSuspended();
+    }
+    throw new Exception("No instance");
+  }
 }
